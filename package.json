@@ -1,0 +1,8 @@
+{
+  "name": "consonance-tree-lib",
+  "version": "1.0.0",
+  "description": "The engine behind The Consonance Tree, as a scriptable library.",
+  "type": "module",
+  "main": "consonance.js",
+  "license": "MIT"
+}
