@@ -240,29 +240,39 @@ function describe(seq, K){
  * @returns {object} analysis (see README / example.js for shape)
  */
 export function analyze(sequence, options = {}){
-  const { transform = null, K = 3, reference = null } = options;
+  const { transform = null, K = 3, reference = null, transpose = null } = options;
   let mode = options.mode || "auto";
   const tokens = tokenize(sequence);
   if(mode === "auto") mode = detectMode(tokens);
 
   let seq = parseTokens(tokens, mode);
 
-  // Reference / tonic: divide every ratio by r so the reference lands on 1/1.
-  // Applied before any transformation word. Default 1/1 leaves the sequence as-is.
+  // reference / tonic: global gauge applied BEFORE the transform — divide every
+  // ratio by r so r lands on 1/1. Affects the base sequence (and thus its image).
   const [rn, rd] = parseRef(reference);
   if(!(rn === 1 && rd === 1)) seq = seq.map(([n,d]) => reduce(n*rd, d*rn));
 
   const word = transform ? parseWord(transform) : [];
+
+  // transpose: applied AFTER the word, to the transformed image only — divide by
+  // t so t lands on 1/1. This is a transposition as part of the transformation.
+  const [tn, td] = parseRef(transpose);
+  const hasTranspose = !(tn === 1 && td === 1);
 
   const result = describe(seq, K);
   result.input = Array.isArray(sequence) ? sequence.join(" ") : String(sequence);
   result.mode = mode;
   result.reference = `${rn}/${rd}`;
   result.transform = word.length ? word.join(" ") : null;
+  result.transpose = `${tn}/${td}`;
 
-  if(word.length){
-    const tAddrs = applyWord(word, seq.map(([n,d]) => fracToAddr(n,d)));
-    const tSeq = tAddrs.map(a => addrToFrac(a));
+  if(word.length || hasTranspose){
+    let tSeq = seq;
+    if(word.length){
+      const tAddrs = applyWord(word, seq.map(([n,d]) => fracToAddr(n,d)));
+      tSeq = tAddrs.map(a => addrToFrac(a));
+    }
+    if(hasTranspose) tSeq = tSeq.map(([n,d]) => reduce(n*td, d*tn));
     result.transformed = describe(tSeq, K);
   } else {
     result.transformed = null;
