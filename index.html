@@ -311,6 +311,11 @@
       <label>…or compose a word (letters L R U S rev, applied left→right; e.g. <code>L L U</code>)</label>
       <input type="text" id="wordinput" placeholder="e.g.  R L   or   L L U" autocomplete="off" spellcheck="false">
     </div>
+    <div style="margin-top:14px;">
+      <label>…and/or transpose the transformed sequence — a reference pitch (any ratio or note name) placed at <code>1/1</code>. Applied after the word. Default <code>1/1</code>.</label>
+      <input type="text" id="xref" value="1/1" autocomplete="off" spellcheck="false" style="max-width:220px;">
+      <div class="err" id="xreferr"></div>
+    </div>
     <div class="controls">
       <div class="modes" id="playmode" style="margin:0;">
         <button data-play="melodic" class="active">Melodic</button>
@@ -693,7 +698,17 @@ function transformSeq(seq){
   const word=getWord();
   const addrs = seq.map(([n,d])=>fracToAddr(n,d));
   const newAddrs = applyWord(word, addrs);
-  return newAddrs.map(a => addrToFrac(a));
+  let out = newAddrs.map(a => addrToFrac(a));
+  // Reference-pitch transpose applied as part of the transformation (after the
+  // word): divide the transformed sequence by r so r lands on 1/1.
+  const xel=document.getElementById('xref');
+  if(xel){
+    const xerr=document.getElementById('xreferr');
+    const xr=parseRefPage(xel.value);
+    if(xr.error){ if(xerr) xerr.textContent=xr.error; }
+    else { if(xerr) xerr.textContent=""; const [rn,rd]=xr.frac; if(!(rn===1&&rd===1)) out=out.map(([n,d])=>reduce(n*rd,d*rn)); }
+  }
+  return out;
 }
 
 /* ---------- TREE DRAWING ---------- */
@@ -1059,6 +1074,7 @@ document.getElementById('wordinput').addEventListener('input',()=>{
 });
 document.getElementById('seqinput').addEventListener('input',update);
 document.getElementById('refinput').addEventListener('input',update);
+document.getElementById('xref').addEventListener('input',update);
 document.getElementById('tempo').addEventListener('input',e=>{
   document.getElementById('tempoval').textContent = playStyle==='chord'
     ? (parseInt(e.target.value,10)/100).toFixed(1)+'s'
