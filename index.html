@@ -596,7 +596,6 @@ function renderFrame(frame, el){
    C(a,b) = (a+b)/(2ab); bidirectional pair consonance f^pm(r_i, r_j) =
    C(num(r_j/r_i), den(r_j/r_i)) + C(num(2*r_i/r_j), den(2*r_i/r_j)).
    Internal C_nn^(K)(T) sums neighbour-distance means up to K.
-   Cross-pair C̄(T, T') averages f^pm(t_i, t'_i) over the trajectory.
    These follow the convention used in the earlier consonance/scales paper. */
 function consonanceC(n, d){
   const g=gcd(n,d)||1; n=n/g; d=d/g;
@@ -626,25 +625,13 @@ function Cnn(seq, K){
   }
   return total;
 }
-function crossPair(seqA, seqB){
-  // Average bidirectional consonance of each ordered pair (a_i, b_i)
-  const n = Math.min(seqA.length, seqB.length);
-  if(n === 0) return 0;
-  let total = 0;
-  for(let i=0; i<n; i++){
-    total += fpm(seqA[i], seqB[i]);
-  }
-  return total / n;
-}
-function renderConsonance(elId, cnnVal, crossVal){
+function renderConsonance(elId, cnnVal){
   const el = document.getElementById(elId);
   if(!el) return;
   const cnnStr = `<span style="color:var(--teal-d);font-weight:600;">C<sub>nn</sub><sup>(3)</sup>(T) =</span> <span style="font-weight:600;color:var(--ink);">${cnnVal.toFixed(4)}</span>`;
-  const crossStr = (crossVal === null || crossVal === undefined) ? "" :
-    `<span style="margin-left:14px;color:var(--rust);font-weight:600;">C̄(T, T′) =</span> <span style="font-weight:600;color:var(--ink);">${crossVal.toFixed(4)}</span>`;
   el.innerHTML = `
     <div style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-bottom:10px;padding:8px 10px;background:#ffffff;border:1px solid var(--line);border-radius:0;">
-      <div>${cnnStr}${crossStr}</div>
+      <div>${cnnStr}</div>
     </div>`;
 }
 
@@ -951,12 +938,8 @@ function update(){
   // Consonance metrics
   const cnnOrig = Cnn(seq, 3);
   const cnnTrans = Cnn(trans, 3);
-  // Cross-pair: only meaningful when operator is non-identity (otherwise T = T')
-  const word = getWord();
-  const isIdentity = (word.length === 0);
-  const cross = isIdentity ? null : crossPair(seq, trans);
-  renderConsonance('origcons', cnnOrig, null);
-  renderConsonance('transcons', cnnTrans, cross);
+  renderConsonance('origcons', cnnOrig);
+  renderConsonance('transcons', cnnTrans);
   renderTable(seq,document.getElementById('origtable'));
   renderTable(trans,document.getElementById('transtable'));
   drawTree(seq,trans);
