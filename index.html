@@ -347,12 +347,14 @@
       <h2>Original</h2>
       <div id="origframe"></div>
       <div id="origcons"></div>
+      <div id="origcopy"></div>
       <div id="origtable"></div>
     </div>
     <div class="panel">
       <h2>Transformed</h2>
       <div id="transframe"></div>
       <div id="transcons"></div>
+      <div id="transcopy"></div>
       <div id="transtable"></div>
     </div>
   </div>
@@ -946,6 +948,56 @@ function parseRefPage(str){
   return {error:`"${str}" is not a valid reference pitch`};
 }
 
+/* ---------- copyable sequence row ----------
+   Shows the panel's sequence as a space-separated ratio string that can be
+   copied or loaded straight back into the input. */
+function renderCopy(elId, seq){
+  const el=document.getElementById(elId);
+  if(!el) return;
+  const str=seq.map(([n,d])=>`${n}/${d}`).join(' ');
+  const btn="font:600 11px/1 'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;padding:5px 9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;";
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:#ffffff;border:1px solid var(--line);">
+      <code style="font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;font-size:12px;color:var(--ink);flex:1 1 120px;word-break:break-all;">${str}</code>
+      <button type="button" class="copybtn" data-seq="${str}" style="${btn}">Copy</button>
+      <button type="button" class="usebtn" data-seq="${str}" style="${btn}">Use as input ↑</button>
+    </div>`;
+}
+
+function copyText(text, btn){
+  const done=()=>{ if(btn){ const o=btn.textContent; btn.textContent='Copied'; setTimeout(()=>{btn.textContent=o;},1200); } };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
+  } else { fallbackCopy(text,done); }
+}
+function fallbackCopy(text, done){
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand('copy'); if(done) done(); }catch(e){}
+  document.body.removeChild(ta);
+}
+// Load a ratio string back into the input as a literal sequence:
+// switch to ratio mode, reset the reference, and clear the transform.
+function useAsInput(str){
+  inputMode='ratio';
+  [...document.querySelectorAll('#modes button')].forEach(b=>b.classList.toggle('active',b.dataset.mode==='ratio'));
+  document.getElementById('inlabel').textContent='Frequency ratios (any positive rationals), space or comma separated';
+  document.getElementById('seqinput').value=str;
+  document.getElementById('refinput').value='1/1';
+  document.getElementById('wordinput').value='';
+  currentOp='I';
+  [...document.querySelectorAll('.op')].forEach(b=>b.classList.toggle('active',b.dataset.op==='I'));
+  update();
+  document.getElementById('seqinput').scrollIntoView({behavior:'smooth',block:'center'});
+}
+document.addEventListener('click',e=>{
+  const cb=e.target.closest('.copybtn');
+  if(cb){ copyText(cb.dataset.seq, cb); return; }
+  const ub=e.target.closest('.usebtn');
+  if(ub){ useAsInput(ub.dataset.seq); return; }
+});
+
 /* ---------- main update ---------- */
 function update(){
   const err=document.getElementById('inputerr');
@@ -973,6 +1025,8 @@ function update(){
   const cnnTrans = Cnn(trans, 3);
   renderConsonance('origcons', cnnOrig);
   renderConsonance('transcons', cnnTrans);
+  renderCopy('origcopy', seq);
+  renderCopy('transcopy', trans);
   renderTable(seq,document.getElementById('origtable'));
   renderTable(trans,document.getElementById('transtable'));
   drawTree(seq,trans);
