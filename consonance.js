@@ -188,6 +188,19 @@ export function parseWord(word){
   return out;
 }
 
+/** Parse a reference pitch (any ratio, decimal, note name, or [n,d]) into [n,d]. */
+export function parseRef(ref){
+  if(ref == null) return [1, 1];
+  if(Array.isArray(ref)) return reduce(Number(ref[0]), Number(ref[1]));
+  const t = String(ref).trim();
+  if(t === "" || t === "1/1" || t === "1") return [1, 1];
+  if(/^[A-Ga-g][#b♯♭]?$/.test(t)){ const r = noteToRatio(t); if(r) return r; }
+  if(t.includes('/')){ const [a,b] = t.split('/').map(Number); if(a>0 && b>0) return reduce(a, b); }
+  const v = parseFloat(t);
+  if(!Number.isNaN(v) && v > 0) return reduce(Math.round(v*10000), 10000);
+  throw new Error(`"${ref}" is not a valid reference pitch`);
+}
+
 /* ---------- the public describe/analyze surface ---------- */
 function describe(seq, K){
   const addrs = seq.map(([n,d]) => fracToAddr(n,d));
@@ -227,17 +240,24 @@ function describe(seq, K){
  * @returns {object} analysis (see README / example.js for shape)
  */
 export function analyze(sequence, options = {}){
-  const { transform = null, K = 3 } = options;
+  const { transform = null, K = 3, reference = null } = options;
   let mode = options.mode || "auto";
   const tokens = tokenize(sequence);
   if(mode === "auto") mode = detectMode(tokens);
 
-  const seq = parseTokens(tokens, mode);
+  let seq = parseTokens(tokens, mode);
+
+  // Reference / tonic: divide every ratio by r so the reference lands on 1/1.
+  // Applied before any transformation word. Default 1/1 leaves the sequence as-is.
+  const [rn, rd] = parseRef(reference);
+  if(!(rn === 1 && rd === 1)) seq = seq.map(([n,d]) => reduce(n*rd, d*rn));
+
   const word = transform ? parseWord(transform) : [];
 
   const result = describe(seq, K);
   result.input = Array.isArray(sequence) ? sequence.join(" ") : String(sequence);
   result.mode = mode;
+  result.reference = `${rn}/${rd}`;
   result.transform = word.length ? word.join(" ") : null;
 
   if(word.length){

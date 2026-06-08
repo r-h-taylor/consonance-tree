@@ -143,6 +143,7 @@ Analyzes one sequence and returns a result object (see [below](#the-result-objec
 | `sequence` | `string` \| `string[]` | A space/comma-separated string (`"3/2 4/3"`) or an array of tokens (`["3/2","4/3"]`). |
 | `options.mode` | `"ratio"` \| `"note"` \| `"auto"` | How to read the tokens. Default `"auto"`: notes if the first token looks like a note name (`A`–`G`, optional `#`/`b`), ratios otherwise. |
 | `options.transform` | `string` \| `string[]` | A transformation word, e.g. `"L L U"`, `"s"`, `"rev"`. Applied left to right. Omit for no transform. |
+| `options.reference` | `string` \| `[n,d]` | A reference pitch / tonic — any ratio (`"3/2"`), decimal, or note name (`"G"`). Every ratio is divided by it so it lands on `1/1`, **before** any transform. Default `1/1` (no change). |
 | `options.K` | `number` | Neighbour depth for the internal consonance C_nn. Default `3`. |
 
 ### `analyzeBatch(sequences, options?)`
@@ -169,6 +170,7 @@ Lower-level building blocks are also exported for advanced use:
 {
   input: "3/2 4/3 5/3 5/4",   // echo of what you passed
   mode: "ratio",               // resolved mode (after auto-detection)
+  reference: "1/1",            // tonic applied (every ratio divided by this)
   transform: "L L U",          // canonical word, or null if none
 
   ratios: ["3/2", "4/3", "5/3", "5/4"],
@@ -241,6 +243,12 @@ Examples: `"L"`, `"R L"`, `"L L U"`, `"s"`, `"rev"`, `"s L"`.
   distance `k` from 1 to `K`, it averages a bidirectional pair-consonance kernel
   over all pairs that far apart, then sums those means. Larger `K` includes more
   distant pairs.
+- **Reference pitch / tonic.** The `reference` option re-expresses the sequence
+  relative to a chosen pitch by dividing every ratio by it (so the reference
+  lands on `1/1`). This is a pure transposition: it leaves all interval content —
+  and therefore `cnn` — unchanged, but it relocates the trajectory on the tree
+  and re-roots the harmonic frame. The reference is a free gauge choice; `1/1`
+  is just the default, not a privileged tonic.
 - The cross-pair score between a trajectory and its image is intentionally not
   reported here; it can be added if needed.
 

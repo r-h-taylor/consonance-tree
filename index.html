@@ -290,6 +290,9 @@
     <label id="inlabel">Frequency ratios (any positive rationals), space or comma separated</label>
     <input type="text" id="seqinput" value="3/2 4/3 5/3 5/4" autocomplete="off" spellcheck="false">
     <div class="err" id="inputerr"></div>
+    <label id="reflabel" style="margin-top:12px;">Reference pitch / tonic — any ratio (or note name); the value placed at <code>1/1</code>. Default <code>1/1</code>.</label>
+    <input type="text" id="refinput" value="1/1" autocomplete="off" spellcheck="false" style="max-width:220px;">
+    <div class="err" id="referr"></div>
     <div class="presets" id="presets"></div>
   </div>
 
@@ -928,13 +931,37 @@ function playSeq(seq, baseHz=261.63, when0=0){
   }
 }
 
+/* ---------- reference pitch / tonic ----------
+   Re-express the sequence relative to a chosen reference r: divide every ratio
+   by r so r lands on 1/1. Pure transposition — preserves all interval content
+   (hence C_nn), but relocates the trajectory on the tree and re-roots the
+   harmonic frame. Applied before any transformation. */
+function parseRefPage(str){
+  const t=(str||"").trim();
+  if(t===""||t==="1/1"||t==="1") return {frac:[1,1]};
+  if(/^[A-Ga-g][#b♯♭]?$/.test(t)){ const r=noteToRatio(t); if(r) return {frac:r}; }
+  if(t.includes('/')){ const [a,b]=t.split('/').map(Number); if(a>0&&b>0) return {frac:reduce(a,b)}; }
+  const v=parseFloat(t);
+  if(!Number.isNaN(v)&&v>0) return {frac:reduce(Math.round(v*10000),10000)};
+  return {error:`"${str}" is not a valid reference pitch`};
+}
+
 /* ---------- main update ---------- */
 function update(){
   const err=document.getElementById('inputerr');
   const parsed=parseSequence(document.getElementById('seqinput').value);
   if(parsed.error){err.textContent=parsed.error;return null;}
   err.textContent="";
-  const seq=parsed.seq;
+  // Reference / tonic: divide all ratios by r so r lands on 1/1 (before transform).
+  let seq=parsed.seq;
+  const referr=document.getElementById('referr');
+  const ref=parseRefPage(document.getElementById('refinput').value);
+  if(ref.error){ referr.textContent=ref.error; }
+  else {
+    referr.textContent="";
+    const [rn,rd]=ref.frac;
+    if(!(rn===1&&rd===1)) seq=seq.map(([n,d])=>reduce(n*rd,d*rn));
+  }
   const trans=transformSeq(seq);
   // Harmonic frames
   const origAddrs = seq.map(([n,d])=>fracToAddr(n,d));
@@ -977,6 +1004,7 @@ document.getElementById('wordinput').addEventListener('input',()=>{
   update();
 });
 document.getElementById('seqinput').addEventListener('input',update);
+document.getElementById('refinput').addEventListener('input',update);
 document.getElementById('tempo').addEventListener('input',e=>{
   document.getElementById('tempoval').textContent = playStyle==='chord'
     ? (parseInt(e.target.value,10)/100).toFixed(1)+'s'
