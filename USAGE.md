@@ -283,3 +283,33 @@ See [`example.js`](example.js) for the full runnable demo.
 Companion to the paper *A Structure of Harmonic Relations* (pending) by
 [Richard Taylor](https://scholar.google.com/citations?user=N6dbY7QAAAAJ&hl=en).
 Released under the MIT License.
+
+---
+
+## Figures
+
+The `figures/` folder holds generators that emit self-contained SVG for the
+paper. `modes_tree.mjs` draws the "modes on the octave subtree" small-multiples
+figure for any tree depth:
+
+```bash
+node figures/modes_tree.mjs [depth] [noteCount] [topN] [cols] > modes.svg
+```
+
+| Argument | Meaning |
+|---|---|
+| `depth` | max Stern–Brocot address depth for the octave pitch pool (default 4 → 7 pitches; 5 → 15; 6 → 31) |
+| `noteCount` | notes per mode, including the fixed 1/1 and 2/1 endpoints (default 8) |
+| `topN` | how many panels to draw, ranked by consonance C_nn (default 12; all shown if fewer exist) |
+| `cols` | panels per row (default 4) |
+
+All four are optional; bare `node figures/modes_tree.mjs` reproduces the
+depth-4 figure. Examples:
+
+```bash
+node figures/modes_tree.mjs              # depth-4 leave-one-out family (7 panels)
+node figures/modes_tree.mjs 5 8 12 4     # depth 5, top 12 eight-note modes
+node figures/modes_tree.mjs 5 7 20 5     # 7-note modes, top 20, 5 per row
+```
+
+The output is a standalone SVG — open it in a browser to view (`open -a Safari modes.svg`).
