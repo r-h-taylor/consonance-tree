@@ -901,8 +901,8 @@ function drawTree(origSeq, transSeq){
   }
 
   drawTrajectory(origAddrs,'#1f3a5f',0);
-  const word=getWord();
-  if(word.length) drawTrajectory(transAddrs,'#7a2a1d',14);
+  const transChanged = transAddrs.length!==origAddrs.length || transAddrs.some((a,i)=>a!==origAddrs[i]);
+  if(transChanged) drawTrajectory(transAddrs,'#7a2a1d',14);
 
   svg.setAttribute('viewBox',`0 0 ${W} ${topPad+figDepth*vsep+50}`);
 }
