@@ -470,6 +470,22 @@ function fracToAddr(n,d,maxd=Infinity){
   throw new Error(`address of ${n}/${d} exceeds MAX_ADDRESS_DEPTH (${MAX_ADDRESS_DEPTH})`);
 }
 function depth(addr){return addr.length;}
+/* Run-length address display. Exact addresses get long — 81/80 is 80 letters,
+   32805/32768 is 894 — and the run-length form is just the continued
+   fraction: RLLLLLLL -> RL⁷. */
+const SUPER="⁰¹²³⁴⁵⁶⁷⁸⁹";
+function addrCompact(addr,threshold=12){
+  if(addr==="") return "ε";
+  if(addr.length<=threshold) return addr;
+  let out="",i=0;
+  while(i<addr.length){
+    let j=i; while(j<addr.length&&addr[j]===addr[i]) j++;
+    const run=j-i;
+    out+=addr[i]+(run>1?String(run).split("").map(c=>SUPER[+c]).join(""):"");
+    i=j;
+  }
+  return out;
+}
 
 /* ---------- operators on trajectories ----------
    Three kinds, distinguished by what they do to the anchor (the deepest
@@ -698,11 +714,11 @@ function renderTable(seq, el){
     const t=nearest12(n,d);
     const dc=devClass(t.dev);
     const sign=t.dev>=0?'+':'';
-    const addrLabel = addr===''?'ε':addr;
+    const addrLabel = addrCompact(addr);
     html+=`<tr>
       <td>${i+1}</td>
       <td><b>${n}/${d}</b></td>
-      <td>${addrLabel}</td>
+      <td title="${addr===''?'ε':addr}">${addrLabel}</td>
       <td>${depth(addr)}</td>
       <td>${t.name}</td>
       <td><span class="dev ${dc}">${sign}${t.dev.toFixed(0)}</span></td>

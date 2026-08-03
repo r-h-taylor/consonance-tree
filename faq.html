@@ -100,7 +100,7 @@
   <p>The cents column shows how far each just ratio sits from its nearest 12-TET semitone: <span class="dev clean">±0–10</span> is clean, <span class="dev noti">±10–25</span> is noticeable, and <span class="dev big">±25+</span> is poorly represented by the equal-tempered grid. The note column adds octave markers <code>↑n</code> / <code>↓n</code> when a pitch is <code>n</code> octaves above or below the root.</p>
 
   <p class="q" id="depth">Why is the syntonic comma at depth 80? <a class="anchor" href="#depth">#</a></p>
-  <p>A node's depth is the sum of its continued-fraction quotients, not the size of its numerator, so nearby-but-complex intervals sit very deep. <code>81/80</code> is at depth 80, <code>64/63</code> at 63, <code>531441/524288</code> at 111, and the schisma <code>32805/32768</code> at 894 — while <code>81/64</code> is only at depth 11. Addresses are computed exactly to whatever depth is required; the tool never truncates one silently.</p>
+  <p>A node's depth is the sum of its continued-fraction quotients, not the size of its numerator, so nearby-but-complex intervals sit very deep. <code>81/80</code> is at depth 80, <code>64/63</code> at 63, <code>531441/524288</code> at 111, and the schisma <code>32805/32768</code> at 894 — while <code>81/64</code> is only at depth 11. Addresses are computed exactly to whatever depth is required; the tool never truncates one silently. Long ones are shown in run-length form — <code>81/80</code> displays as <code>RL⁷⁹</code>, and the schisma as <code>RL⁸⁸⁵RLRLRL³</code> — which is lossless, since the run lengths are exactly the continued-fraction quotients. Hover a compacted address to see it in full.</p>
 
   <h2 id="tool">Using the tool</h2>
 

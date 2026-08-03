@@ -159,9 +159,17 @@ Parses a transformation word (string or array) into canonical operator tokens
 (`["L","L","U"]`). Useful if you want to inspect or validate a word before
 passing it in. Unknown tokens are ignored.
 
+### `addrCompact(addr, threshold?)`
+
+Run-length form of an address, for display: `"RLLLLLLL"` → `"RL⁷"`, `""` → `"ε"`.
+Addresses at or below `threshold` characters (default 12) come back verbatim.
+The run-length encoding is the continued fraction, so this is lossless — the
+Pythagorean comma reads `RL⁷³R³L²RLRL²³R²L⁴` instead of 111 letters.
+
 Lower-level building blocks are also exported for advanced use:
-`fracToAddr`, `addrToFrac`, `applyWord`, `harmonicFrame`, `Cnn`, `fpm`,
-`nearest12`, `primeLimit`, `cents`, `noteToRatio`, `reduce`, `gcd`.
+`fracToAddr`, `fracToAddrInfo`, `addrToFrac`, `applyWord`, `harmonicFrame`,
+`Cnn`, `fpm`, `nearest12`, `primeLimit`, `cents`, `noteToRatio`, `reduce`,
+`gcd`, `MAX_ADDRESS_DEPTH`.
 
 ---
 
@@ -182,6 +190,7 @@ Lower-level building blocks are also exported for advanced use:
       ratio: [3, 2],           // [numerator, denominator], reduced
       ratioStr: "3/2",
       address: "RL",           // Stern–Brocot address ("ε" for 1/1)
+      addressCompact: "RL",    // run-length form for display; "RL⁷⁹" for 81/80
       depth: 2,                // length of the address
       cents: 701.955,          // cents above 1/1
       tet: { name: "G", dev: 1.955, semi: 7 },  // nearest 12-TET note,

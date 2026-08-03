@@ -78,6 +78,35 @@ export function fracToAddr(n, d, maxd = Infinity){
 }
 export function depth(addr){ return addr.length; }
 
+/* ---------- compact address display ----------
+   An address is as deep as the sum of its continued-fraction quotients, so
+   exact addresses for near-unison intervals are long: 81/80 is 80 letters and
+   32805/32768 is 894. Run-length encoding is the continued fraction itself,
+   and is what you want on screen: RLLLLLLL -> RL⁷. */
+const SUPER = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+function superscript(k){ return String(k).split("").map(c => SUPER[+c]).join(""); }
+
+/**
+ * Run-length form of an address: "RLLLLLLL" -> "RL\u2077", "" -> "\u03b5".
+ * @param {string} addr
+ * @param {number} [threshold=12] addresses at or below this length are returned
+ *   verbatim (with "" shown as \u03b5); longer ones are always compacted.
+ */
+export function addrCompact(addr, threshold = 12){
+  if(addr === "") return "\u03b5";
+  if(addr.length <= threshold) return addr;
+  let out = "", i = 0;
+  while(i < addr.length){
+    let j = i;
+    while(j < addr.length && addr[j] === addr[i]) j++;
+    const run = j - i;
+    out += addr[i] + (run > 1 ? superscript(run) : "");
+    i = j;
+  }
+  return out;
+}
+
+
 /* ---------- operators on trajectories ----------
    Anchor-shifting (L, R, U): move the deepest common ancestor of the
    nodes, preserving each node's position relative to it.
@@ -249,6 +278,7 @@ function describe(seq, K){
         ratio: [n,d],
         ratioStr: `${n}/${d}`,
         address: addrs[i] === "" ? "ε" : addrs[i],
+        addressCompact: addrCompact(addrs[i]),
         depth: depth(addrs[i]),
         cents: cents(n,d),
         tet: t,

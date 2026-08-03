@@ -66,7 +66,7 @@ function printBlock(title, b) {
     : "";
   console.log(title);
   console.log("  ratios    ", b.ratios.join("  "));
-  console.log("  address   ", b.notes.map(n => n.address).join("  "));
+  console.log("  address   ", b.notes.map(n => n.addressCompact).join("  "));
   console.log("  depth     ", b.notes.map(n => n.depth).join("  "));
   console.log("  12-TET    ", b.notes.map(n => n.tet.name).join("  "));
   console.log("  limit     ", b.notes.map(n => n.primeLimit).join("  "));
