@@ -369,16 +369,21 @@
     <h2>About</h2>
     <p class="footnote">
       Each positive rational <code>a/b</code> is a node of the full Stern–Brocot tree, rooted at
-      <code>1/1</code>. A musical sequence is a trajectory through the tree. The operators come in
-      two families. <strong>Anchor-shifting</strong> operators move the trajectory as a coherent
-      shape by shifting its <em>anchor</em> — the deepest common ancestor of its nodes — while
-      preserving each node's position relative to that anchor: <code>L</code> moves the anchor to
-      its left child, <code>R</code> to its right child, <code>U</code> to its parent.
-      <strong>Pointwise</strong> operators act on each node's address independently:
-      <code>σ</code> swaps L↔R in every address (reflecting the trajectory across <code>1/1</code>),
-      and <code>rev</code> reverses each address. Together <code>L</code>, <code>R</code>,
-      <code>U</code> can shift any trajectory to any anchor position; every operator preserves the
-      trajectory's internal shape and depth profile. The <strong>cents</strong> column shows
+      <code>1/1</code>. A musical sequence is a trajectory through the tree. The operators are of three kinds,
+      distinguished by what they do to the trajectory's <em>anchor</em> — the deepest common
+      ancestor of its nodes. <strong>Anchor-shifting</strong> operators move the trajectory as a
+      rigid shape by moving the anchor while holding each node's position relative to it:
+      <code>L</code> moves the anchor to its left child, <code>R</code> to its right child,
+      <code>U</code> to its parent. <code>U</code> is partial — there is nothing above the root,
+      so it does nothing to a trajectory whose anchor is already <code>1/1</code>.
+      <strong>Anchor-preserving:</strong> <code>σ</code> swaps L↔R in every address, which at the
+      value level is reciprocation <code>a/b → b/a</code>, a reflection of the whole tree about
+      <code>1/1</code>; it carries the anchor to its mirror and leaves both <code>C_nn</code> and
+      the prime limit exactly unchanged. <strong>Anchor-destroying:</strong> <code>rev</code>
+      reverses each address, turning the common prefix into a common suffix, so the image
+      generally has an unrelated anchor. All three preserve the depth profile, but only
+      <code>σ</code> preserves consonance — <code>L</code>, <code>R</code> and <code>U</code> move
+      the trajectory into genuinely more or less consonant regions of the tree. The <strong>cents</strong> column shows
       deviation of each just ratio from its nearest 12-TET semitone (<span class="dev small">±0–10</span>
       clean, <span class="dev med">±10–25</span> noticeable, <span class="dev big">±25+</span> poorly
       represented). The note column includes octave markers <code>↑n</code> / <code>↓n</code>
@@ -442,26 +447,44 @@ function addrToFrac(addr){
   }
   return [n,d];
 }
-function fracToAddr(n,d,maxd=60){
-  let ln=0,ld=1,rn=1,rd=0,cn=1,cd=1,addr="";
-  for(let i=0;i<maxd;i++){
+/* A reduced positive rational has a finite address, of length equal to the sum
+   of its continued-fraction quotients, and the descent reaches it in exactly
+   that many steps; intermediate mediants are bounded by the input, so no
+   iteration cap is needed for correctness. Depths run deeper than they look:
+   81/80 is at depth 80 and 32805/32768 at 894. Silently truncating returns a
+   different rational with no signal, so we throw instead. */
+const MAX_ADDRESS_DEPTH = 100000;
+function fracToAddr(n,d,maxd=Infinity){
+  if(!Number.isInteger(n)||!Number.isInteger(d)||n<=0||d<=0)
+    throw new Error(`fracToAddr expects positive integers, got ${n}/${d}`);
+  const limit = Math.min(maxd, MAX_ADDRESS_DEPTH);
+  let ln=0,ld=1,rn=1,rd=0,cn=1,cd=1;
+  const out=[];
+  while(out.length<limit){
     const cmp = n*cd - cn*d;
-    if(cmp===0) return addr;
-    if(cmp<0){addr+='L';rn=cn;rd=cd;cn=ln+cn;cd=ld+cd;}
-    else{addr+='R';ln=cn;ld=cd;cn=cn+rn;cd=cd+rd;}
+    if(cmp===0) return out.join("");
+    if(cmp<0){out.push('L');rn=cn;rd=cd;cn=ln+cn;cd=ld+cd;}
+    else{out.push('R');ln=cn;ld=cd;cn=cn+rn;cd=cd+rd;}
   }
-  return addr;
+  if(maxd<MAX_ADDRESS_DEPTH) return out.join("");
+  throw new Error(`address of ${n}/${d} exceeds MAX_ADDRESS_DEPTH (${MAX_ADDRESS_DEPTH})`);
 }
 function depth(addr){return addr.length;}
 
 /* ---------- operators on trajectories ----------
-   Two families:
-   • Anchor-shifting (L, R, U): move the trajectory's anchor — the deepest
-     common ancestor of its nodes — while preserving each node's position
-     relative to the anchor. The trajectory shifts as a coherent shape.
-   • Pointwise (S, V): act on each node's full address independently.
-     S (σ) swaps L↔R in every address, reflecting the trajectory across 1/1.
-     V (rev) reverses each address.
+   Three kinds, distinguished by what they do to the anchor (the deepest
+   common ancestor, i.e. the longest common prefix of the addresses):
+   • Anchor-shifting (L, R, U): right-translate the anchor, holding every
+     node's position relative to it fixed. The trajectory moves as a rigid
+     shape. U is PARTIAL — undefined when the anchor is empty, which is the
+     case for any trajectory containing 1/1. Here it clamps (no-op).
+   • Anchor-preserving (S): the letter swap is a monoid automorphism,
+     sigma(uv) = sigma(u)sigma(v), so it maps the anchor to sigma(anchor).
+     At the value level it is reciprocation a/b -> b/a, a reflection of the
+     whole tree about 1/1. It preserves C_nn and the prime limit exactly.
+   • Anchor-destroying (V): reversal is an ANTI-automorphism,
+     rev(uv) = rev(v)rev(u), so it turns the common prefix into a common
+     suffix. The image generally has an unrelated anchor.
 */
 function commonPrefix(addrs){
   if(!addrs.length) return "";
@@ -641,11 +664,16 @@ function Cnn(seq, K){
   K = K || 3;
   const n = seq.length;
   if(n < 2) return 0;
+  // C_nn is a property of the pitch SET, so sort by pitch first: "k steps
+  // apart" must mean k scale-steps, not k positions in the input order.
+  // This is also what makes sigma an exact isometry, since reciprocation
+  // reverses pitch order and so swaps the arguments of each pair.
+  const s = seq.slice().sort((a, b) => a[0] / a[1] - b[0] / b[1]);
   let total = 0;
   for(let k=1; k<=Math.min(K, n-1); k++){
     let sum = 0; let cnt = 0;
     for(let i=0; i<n-k; i++){
-      sum += fpm(seq[i], seq[i+k]);
+      sum += fpm(s[i], s[i+k]);
       cnt++;
     }
     if(cnt) total += sum / cnt;

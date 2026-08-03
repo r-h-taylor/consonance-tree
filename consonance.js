@@ -34,15 +34,47 @@ export function addrToFrac(addr){
   }
   return [n, d];
 }
-export function fracToAddr(n, d, maxd=60){
-  let ln=0, ld=1, rn=1, rd=0, cn=1, cd=1, addr="";
-  for(let i=0; i<maxd; i++){
+/* A reduced positive rational has a FINITE address, of length equal to the sum
+   of its continued-fraction quotients, and the descent reaches it in exactly
+   that many steps. Every intermediate mediant on the path to a/b has numerator
+   <= a and denominator <= b, so the arithmetic cannot overflow beyond the input
+   and no iteration cap is needed for correctness. Depths are larger than they
+   look: 81/80 (syntonic comma) sits at depth 80, 64/63 at 63, 531441/524288 at
+   111, and 32805/32768 (schisma) at 894. Truncating silently at some small
+   bound returns a DIFFERENT rational with no signal, so we do not do it: pass
+   an explicit `maxd` if you want a depth-limited approximant, and read `exact`
+   to find out whether you got one. */
+
+/** Hard sanity bound. Exceeding it throws rather than returning a wrong node. */
+export const MAX_ADDRESS_DEPTH = 100000;
+
+/**
+ * Address of n/d, with provenance.
+ * @returns {{addr:string, depth:number, exact:boolean}} `exact` is false only
+ *   when an explicit finite `maxd` cut the descent short.
+ */
+export function fracToAddrInfo(n, d, maxd = Infinity){
+  if(!Number.isInteger(n) || !Number.isInteger(d) || n <= 0 || d <= 0)
+    throw new Error(`fracToAddr expects positive integers, got ${n}/${d}`);
+  if(!Number.isSafeInteger(n * d))
+    throw new Error(`${n}/${d} is too large for exact integer arithmetic`);
+  const limit = Math.min(maxd, MAX_ADDRESS_DEPTH);
+  let ln=0, ld=1, rn=1, rd=0, cn=1, cd=1;
+  const out = [];
+  while(out.length < limit){
     const cmp = n*cd - cn*d;
-    if(cmp===0) return addr;
-    if(cmp<0){ addr+='L'; rn=cn; rd=cd; cn=ln+cn; cd=ld+cd; }
-    else     { addr+='R'; ln=cn; ld=cd; cn=cn+rn; cd=cd+rd; }
+    if(cmp===0) return { addr: out.join(""), depth: out.length, exact: true };
+    if(cmp<0){ out.push('L'); rn=cn; rd=cd; cn=ln+cn; cd=ld+cd; }
+    else     { out.push('R'); ln=cn; ld=cd; cn=cn+rn; cd=cd+rd; }
   }
-  return addr;
+  if(maxd < MAX_ADDRESS_DEPTH)                      // deliberate truncation
+    return { addr: out.join(""), depth: out.length, exact: false };
+  throw new Error(`address of ${n}/${d} exceeds MAX_ADDRESS_DEPTH (${MAX_ADDRESS_DEPTH})`);
+}
+
+/** Address of n/d. Exact for any reduced positive rational. */
+export function fracToAddr(n, d, maxd = Infinity){
+  return fracToAddrInfo(n, d, maxd).addr;
 }
 export function depth(addr){ return addr.length; }
 
@@ -123,10 +155,14 @@ export function fpm(ri, rj){
 export function Cnn(seq, K=3){
   const n = seq.length;
   if(n < 2) return 0;
+  // C_nn is a property of the pitch SET: sort by pitch so "k steps apart"
+  // means k scale-steps, not k positions in the input order. This is also
+  // what makes sigma an exact isometry (reciprocation reverses pitch order).
+  const s = seq.slice().sort((a, b) => a[0] / a[1] - b[0] / b[1]);
   let total = 0;
   for(let k=1; k<=Math.min(K, n-1); k++){
     let sum=0, cnt=0;
-    for(let i=0; i<n-k; i++){ sum += fpm(seq[i], seq[i+k]); cnt++; }
+    for(let i=0; i<n-k; i++){ sum += fpm(s[i], s[i+k]); cnt++; }
     if(cnt) total += sum / cnt;
   }
   return total;

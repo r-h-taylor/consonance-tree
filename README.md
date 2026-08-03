@@ -4,7 +4,7 @@ An interactive visualizer for harmonic relations on the Stern–Brocot tree, com
 
 ## What it does
 
-Enter a musical sequence (as just-intonation ratios or note names) and apply transformations from the operator group G = F₂ ⋊ V₄:
+Enter a musical sequence (as just-intonation ratios or note names) and apply transformations from the operator monoid described in the paper:
 
 - places each interval as a node on the **full Stern–Brocot tree** rooted at 1/1;
 - draws the **trajectory** through the tree, with the lower half (intervals < 1) on the left and the upper half (intervals > 1) on the right;
@@ -19,14 +19,27 @@ Enter a musical sequence (as just-intonation ratios or note names) and apply tra
 
 ## Transformations
 
-The operators are split into two families:
+The operators are of three kinds, according to what they do to the trajectory's
+**anchor** (the deepest common ancestor of its nodes):
 
-- **Anchor-shifting** (`L`, `R`, `U`): move the trajectory as a coherent shape by shifting its deepest common ancestor.
-- **Pointwise** (`σ`, `rev`): act on each node's address independently. σ swaps L ↔ R (reflection across 1/1); rev reverses each address.
+- **Anchor-shifting** (`L`, `R`, `U`): move the trajectory as a rigid shape by moving the
+  anchor to its left child, right child, or parent. `U` is *partial* — there is nothing
+  above the root, so it has no effect once the anchor is `1/1`.
+- **Anchor-preserving** (`σ`): swaps L ↔ R in every address, which at the value level is
+  reciprocation `a/b → b/a`, a reflection of the whole tree about 1/1. The letter swap is a
+  monoid automorphism, so the anchor maps to its mirror. It preserves `C_nn` and the prime
+  limit exactly.
+- **Anchor-destroying** (`rev`): reverses each address. Reversal is an *anti*-automorphism,
+  turning a common prefix into a common suffix, so the image generally has an unrelated anchor.
 
-All preserve the relative depth profile. You can also compose a word (`σ L`, `R L`, `L L U`); tokens are applied left to right. Type `s` for σ in the word input.
+Because `L` and `R` have no total inverse, these generate a monoid rather than a group: the
+addresses form the free monoid on `{L, R}`, and ascent is its partial inverse. All the
+operators preserve the relative depth profile, but only `σ` preserves consonance.
 
-Alongside G there is a **transpose** — a reference-pitch shift that divides every ratio by a chosen pitch. Unlike the operators above, it leaves all interval content (and hence the consonance) unchanged, sliding the trajectory rigidly through the tree while re-rooting the harmonic frame. It is available in two places: as the input's **reference / tonic** (a global gauge, applied before the word, moving both panels together) and in the **Transformation** panel (applied to the image only, after the word).
+You can also compose a word (`σ L`, `R L`, `L L U`); tokens are applied left to right.
+Type `s` for σ in the word input.
+
+Alongside these operators there is a **transpose** — a reference-pitch shift that divides every ratio by a chosen pitch. Unlike the operators above, it leaves all interval content (and hence the consonance) unchanged, sliding the trajectory rigidly through the tree while re-rooting the harmonic frame. It is available in two places: as the input's **reference / tonic** (a global gauge, applied before the word, moving both panels together) and in the **Transformation** panel (applied to the image only, after the word).
 
 ## Presets
 

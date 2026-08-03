@@ -199,7 +199,7 @@ Lower-level building blocks are also exported for advanced use:
     rootInChord: true          // is the root actually one of the notes?
   },
 
-  cnn: 0.9146,                 // internal consonance C_nn^(K)
+  cnn: 1.3359,                 // internal consonance C_nn^(K)
 
   transformed: { /* ... */ }   // same shape as above for the image under
                                // `transform`, or null if no transform given
@@ -220,14 +220,17 @@ Tokens are case-insensitive and accept several spellings:
 |---|---|---|
 | `L` | `l` | Anchor-shift: descend left (deepest common ancestor → left child) |
 | `R` | `r` | Anchor-shift: descend right |
-| `U` | `u`, `up`, `↑`, `^`, `ascend` | Anchor-shift: ascend (anchor → parent) |
+| `U` | `u`, `up`, `↑`, `^`, `ascend` | Anchor-shift: ascend (anchor → parent). Partial: no effect once the anchor is `1/1`. |
 | `σ` | `s`, `sigma`, `reflect` | Pointwise: swap L↔R in every address (reflect across 1/1) |
 | `rev` | `rev`, `v`, `reverse` | Pointwise: reverse each address |
 
 The anchor-shifting operators (`L`, `R`, `U`) move the whole trajectory as a
-coherent shape by relocating its deepest common ancestor. The pointwise
-operators (`σ`, `rev`) act on each node's address independently. All preserve
-the relative depth profile.
+rigid shape by relocating its anchor (deepest common ancestor). `σ` and `rev`
+act on each address independently, but differ in kind: the letter swap `σ` is a
+monoid automorphism, so it maps the anchor to its mirror and preserves the
+trajectory's structure, while `rev` is an anti-automorphism that turns the
+common prefix into a common suffix and so destroys the anchor. All preserve the
+relative depth profile; only `σ` preserves consonance.
 
 Examples: `"L"`, `"R L"`, `"L L U"`, `"s"`, `"rev"`, `"s L"`.
 
@@ -238,13 +241,23 @@ Examples: `"L"`, `"R L"`, `"L L U"`, `"s"`, `"rev"`, `"s L"`.
 - **No octave reduction.** Every pitch sits at its honest position in the full
   Stern–Brocot tree, so `2/1` and `1/2` are distinct nodes, not folded into
   `1/1`.
+- **Addresses are exact.** `fracToAddr(n, d)` runs to completion for any reduced
+  positive rational — there is no silent depth cap. Addresses are deeper than
+  they look: a node's depth is the sum of its continued-fraction quotients, so
+  `81/80` (the syntonic comma) sits at depth 80 and `32805/32768` (the schisma)
+  at depth 894. Pass an explicit `maxd` if you want a depth-limited approximant,
+  and use `fracToAddrInfo(n, d, maxd)` to get `{addr, depth, exact}` so you can
+  tell an approximant from an exact address. Non-integer or non-positive input
+  throws, as does anything exceeding `MAX_ADDRESS_DEPTH` (100000).
 - **Note names** use 5-limit just intonation with **C as the 1/1 root**
   (`C`=1/1, `E`=5/4, `G`=3/2, and so on). Accidentals `#`/`♯` and `b`/`♭` are
   accepted.
-- **Consonance.** `cnn` is the internal consonance C_nn^(K): for each neighbour
-  distance `k` from 1 to `K`, it averages a bidirectional pair-consonance kernel
-  over all pairs that far apart, then sums those means. Larger `K` includes more
-  distant pairs.
+- **Consonance.** `cnn` is the internal consonance C_nn^(K). The sequence is
+  first **sorted by pitch**, so that "k apart" means k scale-steps rather than k
+  positions in the input; then for each neighbour distance `k` from 1 to `K` it
+  averages a bidirectional pair-consonance kernel over all pairs that far apart
+  and sums those means. Larger `K` includes more distant pairs. Sorting makes
+  `cnn` a property of the pitch set, and is what makes `σ` an exact isometry.
 - **Reference vs. transpose.** Both `reference` and `transpose` are transpositions
   (division by a rational), and both leave all interval content — and therefore
   `cnn` — unchanged; they only relocate where things sit on the tree and what is
