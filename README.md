@@ -7,7 +7,7 @@ An interactive visualizer for harmonic relations on the Stern–Brocot tree, com
 Enter a musical sequence (as just-intonation ratios or note names) and apply transformations from the operator monoid described in the paper:
 
 - places each interval as a node on the **full Stern–Brocot tree** rooted at 1/1;
-- draws the **trajectory** through the tree, with the lower half (intervals < 1) on the left and the upper half (intervals > 1) on the right;
+- draws the **trajectory** through the tree, with the lower half (intervals < 1) on the left and the upper half (intervals > 1) on the right, collapsing empty depth levels into a marked break so deep trajectories stay readable;
 - overlays the trajectory's **image under the chosen transformation** in a contrasting colour;
 - marks the chord's **harmonic root** with a ring — solid when sounded, dashed when implied;
 - displays the **harmonic frame** (the chord root's mediant-parents) above each panel;

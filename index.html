@@ -785,8 +785,40 @@ function drawTree(origSeq, transSeq){
   const skelDepth = Math.max(baseDepth, Math.min(trajMaxDepth, 8));
   // Total figure depth is the larger of skeleton depth or actual trajectory depth.
   const figDepth = Math.max(skelDepth, trajMaxDepth);
-  // Adaptive vertical spacing: shrink when figure is tall so it stays a reasonable height
-  const vsep = figDepth <= 7 ? 66 : (figDepth <= 10 ? 52 : (figDepth <= 13 ? 42 : 34));
+
+  /* ---- elided depth axis ----------------------------------------------
+     Exact addresses are deep: 81/80 sits at depth 80 and the schisma at 894,
+     so a linear depth axis spends almost all its height on empty levels that
+     a single trajectory line passes straight through. Keep the levels that
+     carry something — the skeleton, every trajectory node, and one level of
+     approach above each — and collapse each run of empty levels between them
+     into one break row, drawn with a broken-axis marker. */
+  const keep = new Set();
+  for(let dd=0; dd<=skelDepth; dd++) keep.add(dd);
+  for(const a of origAddrs.concat(transAddrs)){
+    const dd = depth(a);
+    keep.add(dd);
+    if(dd > 0) keep.add(dd-1);   // one level of approach, so the node isn't orphaned
+  }
+  keep.add(figDepth);
+
+  // Assign each depth a row; runs of dropped depths share one break row.
+  const yRow = new Array(figDepth+1);
+  const breaks = [];
+  let rows = 0;
+  for(let dd=0; dd<=figDepth; ){
+    if(keep.has(dd)){ yRow[dd] = rows++; dd++; }
+    else {
+      const from = dd;
+      while(dd <= figDepth && !keep.has(dd)) dd++;
+      for(let k=from; k<dd; k++) yRow[k] = rows;
+      breaks.push({from, to: dd-1, row: rows});
+      rows++;
+    }
+  }
+  // Spacing is now driven by the number of drawn rows, not the raw depth.
+  const vsep = rows <= 8 ? 66 : (rows <= 11 ? 52 : (rows <= 14 ? 42 : 34));
+  const figHeight = topPad + (rows-1)*vsep;
 
   // Full-tree X position: root 1/1 at center. Left subtree spreads leftward (half-plane),
   // right subtree spreads rightward (half-plane). Each level halves the local width.
@@ -802,7 +834,7 @@ function drawTree(origSeq, transSeq){
     }
     return x;
   }
-  function Y(addr){return topPad + addr.length*vsep;}
+  function Y(addr){return topPad + yRow[addr.length]*vsep;}
 
   // Tree skeleton edges
   (function recEdge(addr){
@@ -818,14 +850,40 @@ function drawTree(origSeq, transSeq){
     }
   })("");
 
-  // Depth labels
+  // Depth labels for the levels we actually draw
   for(let dd=0;dd<=figDepth;dd++){
+    if(!keep.has(dd)) continue;
     const t=document.createElementNS(SVG_NS,'text');
-    t.setAttribute('x',12);t.setAttribute('y',topPad+dd*vsep+4);
+    t.setAttribute('x',12);t.setAttribute('y',topPad+yRow[dd]*vsep+4);
     t.setAttribute('font-family','JetBrains Mono, SF Mono, Menlo, Consolas, monospace');
     t.setAttribute('font-size','10');t.setAttribute('fill','#888888');
     t.textContent='d'+dd;
     svg.appendChild(t);
+  }
+
+  // Broken-axis markers for the collapsed runs
+  for(const br of breaks){
+    const y = topPad + br.row*vsep;
+    const n = br.to - br.from + 1;
+    const rule=document.createElementNS(SVG_NS,'line');
+    rule.setAttribute('x1',34);rule.setAttribute('y1',y);
+    rule.setAttribute('x2',W-14);rule.setAttribute('y2',y);
+    rule.setAttribute('stroke','#cccccc');rule.setAttribute('stroke-width','1');
+    rule.setAttribute('stroke-dasharray','2 4');
+    svg.appendChild(rule);
+    const lab=document.createElementNS(SVG_NS,'text');
+    lab.setAttribute('x',12);lab.setAttribute('y',y+4);
+    lab.setAttribute('font-family','JetBrains Mono, SF Mono, Menlo, Consolas, monospace');
+    lab.setAttribute('font-size','10');lab.setAttribute('fill','#bbbbbb');
+    lab.textContent='\u2e3a';
+    svg.appendChild(lab);
+    const note=document.createElementNS(SVG_NS,'text');
+    note.setAttribute('x',W-16);note.setAttribute('y',y-5);
+    note.setAttribute('text-anchor','end');
+    note.setAttribute('font-family','JetBrains Mono, SF Mono, Menlo, Consolas, monospace');
+    note.setAttribute('font-size','9');note.setAttribute('fill','#bbbbbb');
+    note.textContent = n===1 ? `d${br.from} elided` : `d${br.from}\u2013d${br.to} elided (${n} levels)`;
+    svg.appendChild(note);
   }
 
   // Side labels: "lower" / "upper" indicating the two halves
@@ -959,7 +1017,7 @@ function drawTree(origSeq, transSeq){
   const transChanged = transAddrs.length!==origAddrs.length || transAddrs.some((a,i)=>a!==origAddrs[i]);
   if(transChanged) drawTrajectory(transAddrs,'#7a2a1d',14);
 
-  svg.setAttribute('viewBox',`0 0 ${W} ${topPad+figDepth*vsep+50}`);
+  svg.setAttribute('viewBox',`0 0 ${W} ${figHeight+50}`);
 }
 
 /* ---------- AUDIO ---------- */
